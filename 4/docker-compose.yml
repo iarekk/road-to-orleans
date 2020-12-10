@@ -3,7 +3,7 @@ services:
   firstsilo:
     networks:
       testing_net:
-        ipv4_address: 172.28.1.1
+        ipv4_address: 172.28.1.1 # entrypoint script or env var?
     build:  
       context: .
       dockerfile: ./ops/SiloHost/Dockerfile
@@ -11,9 +11,9 @@ services:
     environment:
     - GATEWAYPORT=3001
     - SILOPORT=2001
-    - ADVERTISEDIP=172.28.1.1
+    - ADVERTISEDIP=172.28.1.1 # I wouldn't hardcode it here
     ports:
-      - "3005:8080"
+      - "3005:8080" # probably best to use 8081, 8082 so they are all individually reachable
       
   secondsilo:
     networks:

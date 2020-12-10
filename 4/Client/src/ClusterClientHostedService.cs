@@ -35,7 +35,7 @@ namespace Client
                     clusterOptions.ClusterId = "cluster-of-silos";
                     clusterOptions.ServiceId = "hello-world-service";
                 })
-                .UseStaticClustering(gateways.ToArray())
+                .UseStaticClustering(gateways.ToArray()) // in this case, let's rely only on one silo (for simplicity), and in a LB example, we'll define something more resilient. in this case, all clients will be using the "primary" silo and orleans will automatically distribute the load
                 .ConfigureLogging(loggingBuilder =>
                     loggingBuilder.SetMinimumLevel(LogLevel.Information).AddProvider(loggerProvider))
                 .Build();
@@ -47,6 +47,9 @@ namespace Client
         {
             var endpoints = new List<IPEndPoint>();
             string[] gateways = new string[] { };
+            
+            // Only one address will do here (the primary)
+            // later on, we can use a load balancer address here
             if(Environment.GetEnvironmentVariable("SILOGATEWAYS") != null)
             {
                 gateways = Environment.GetEnvironmentVariable("SILOGATEWAYS")?.Split(',');
@@ -56,6 +59,7 @@ namespace Client
                 var split = gateway.Split(':');
                 if (split.Length == 2)
                 {
+                    // I'd probably stick to the orleans terms: advertised address, silo and gateway ports
                     var ip = IPAddress.Parse(split[0]);
                     var port = int.Parse(split[1]);
                     var endPoint = new IPEndPoint(ip, port);
@@ -63,6 +67,7 @@ namespace Client
                 }
             }
 
+            // I wouldn't default to 3000, we can probably drop it
             if (!endpoints.Any())
             {
                 var endpoint = new IPEndPoint(GetLocalIpAddress(), 3000);

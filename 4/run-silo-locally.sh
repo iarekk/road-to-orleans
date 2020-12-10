@@ -5,3 +5,10 @@ export PEERADDRESS=`ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | gre
 export GATEWAYPORT=3001,3001,3002,3003
 export SILOPORT=2001,2001,2002,2003
 dotnet run --project ./SiloHost/SiloHost.csproj
+
+#run silo cluster + client locally/docker
+#run-silo-cluster-locally.sh
+#  run-silo-1-locally.sh
+#  run-silo-2-locally.sh
+#  run-silo-3-locally.sh
+#  run-silo-4-locally.sh

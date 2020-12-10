@@ -21,15 +21,26 @@ namespace SiloHost
             var advertisedIp = Environment.GetEnvironmentVariable("ADVERTISEDIP");
             var advertisedIpAddress = advertisedIp == null ? GetLocalIpAddress() : IPAddress.Parse(advertisedIp);
             var parsedGatewayPort = GetAvailablePort(Environment.GetEnvironmentVariable("GATEWAYPORT"));
+            // let's not default those ports as they can clash in multi-silo scenarios. Probably best just to crash the application
             var gatewayPort = parsedGatewayPort != 0 ? parsedGatewayPort : 3000;
             var parsedSiloPort = GetAvailablePort(Environment.GetEnvironmentVariable("SILOPORT"));
             var siloPort = parsedSiloPort != 0 ? parsedSiloPort : 2000;
             Console.WriteLine($"Gateway port:{gatewayPort}");
             Console.WriteLine($"Silo port:{siloPort}");
+            // These two ports are for individual silos ^^
 
+            // silo port
+            //     listening silo port
+            // gateway port
+            //     listening gateway port
+            
+            // let's change the wording slightly:
+            // var primarySiloPort = int.Parse(Environment.GetEnvironmentVariable("PRIMARYSILOPORT") ?? "2001");
+            // 2001 we can default because there's always going to be only one such port, so no clashes
             var developmentPeerPort = int.TryParse(Environment.GetEnvironmentVariable("PEERPORT"), out var f) ? f : default(int?);
             IPEndPoint siloNode = null;
             
+            // inspect this closer (note to self)
             if (developmentPeerPort != null && developmentPeerPort != siloPort)
             {
                 var primaryPath = Environment.GetEnvironmentVariable("PEERADDRESS");
@@ -58,10 +69,10 @@ namespace SiloHost
                     siloBuilder.Configure<EndpointOptions>(endpointOptions =>
                     {
                         endpointOptions.AdvertisedIPAddress = siloEndpointConfiguration.Ip;
-                        endpointOptions.SiloPort = siloPort;
+                        endpointOptions.SiloPort = siloPort; // ideally, this should be siloEndpointConfiguration
                         endpointOptions.GatewayPort = siloEndpointConfiguration.GatewayPort;
-                        endpointOptions.SiloListeningEndpoint = new IPEndPoint(IPAddress.Any, siloPort);
-                        endpointOptions.GatewayListeningEndpoint = new IPEndPoint(IPAddress.Any, gatewayPort);
+                        endpointOptions.SiloListeningEndpoint = new IPEndPoint(IPAddress.Any, siloPort);       // 2000
+                        endpointOptions.GatewayListeningEndpoint = new IPEndPoint(IPAddress.Any, gatewayPort); // 3000
                     });
                     siloBuilder.ConfigureApplicationParts(applicationPartManager =>
                         applicationPartManager.AddApplicationPart(typeof(HelloWorld).Assembly).WithReferences());
@@ -70,6 +81,7 @@ namespace SiloHost
                 .RunConsoleAsync();
         }
 
+        // the silo port needs to be passed in here
         private static SiloEndpointConfiguration GetSiloEndpointConfiguration(
             IPAddress advertisedAddress,
             int gatewayPort)
@@ -86,7 +98,7 @@ namespace SiloHost
             IPGlobalProperties ipGlobalProperties = IPGlobalProperties.GetIPGlobalProperties();
             TcpConnectionInformation[] tcpConnInfoArray = ipGlobalProperties.GetActiveTcpConnections();
 
-            var parsedPorts = Array.ConvertAll(ports.Split(','), s=> int.Parse(s));
+            var parsedPorts = Array.ConvertAll(ports.Split(','), int.Parse);
             if (!tcpConnInfoArray.Any())
             {
                 return parsedPorts.First();
