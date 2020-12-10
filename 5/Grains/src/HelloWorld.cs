@@ -1,6 +1,5 @@
 ﻿using System.Threading.Tasks;
 using Interfaces;
-using Library;
 
 namespace Grains
 {
@@ -8,7 +7,8 @@ namespace Grains
     {
         public async Task<string> SayHello(string name)
         {
-            return await Task.FromResult(Say.hello(name));
+            return await Task.FromResult($"Hello, {name}!");            
+            // return await Task.FromResult(Say.hello(name));
         }
     }
 }

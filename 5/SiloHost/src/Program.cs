@@ -19,9 +19,11 @@ namespace SiloHost
         {
             var advertisedIp = Environment.GetEnvironmentVariable("ADVERTISEDIP");
             var advertisedIpAddress = advertisedIp == null ? GetLocalIpAddress() : IPAddress.Parse(advertisedIp);
-            var gatewayPort = int.Parse(Environment.GetEnvironmentVariable("GATEWAYPORT") ?? "3000");
+            var gatewayPort = int.Parse(Environment.GetEnvironmentVariable("GATEWAYPORT") ?? throw new Exception("Gateway port missing."));
+            var siloPort = int.Parse(Environment.GetEnvironmentVariable("SILOPORT") ?? throw new Exception("Silo port missing."));
+            var primarySiloPort = int.Parse(Environment.GetEnvironmentVariable("PRIMARYSILOPORT") ?? throw new Exception("Primary silo port missing."));
             
-            var siloEndpointConfiguration = GetSiloEndpointConfiguration(advertisedIpAddress, gatewayPort);
+            var siloEndpointConfiguration = GetSiloEndpointConfiguration(advertisedIpAddress, siloPort, gatewayPort);
 
             return new HostBuilder()
                 .UseOrleans(siloBuilder =>
@@ -32,14 +34,19 @@ namespace SiloHost
                         dashboardOptions.Username = "piotr";
                         dashboardOptions.Password = "orleans";
                     });
-                    siloBuilder.UseLocalhostClustering();
+                    siloBuilder.UseDevelopmentClustering(new IPEndPoint(advertisedIpAddress, primarySiloPort));
+                    siloBuilder.Configure<ClusterOptions>(clusterOptions =>
+                    {
+                        clusterOptions.ClusterId = "this-is-not-relevant-yet";
+                        clusterOptions.ServiceId = "this-is-not-relevant-yet";
+                    });
                     siloBuilder.Configure<EndpointOptions>(endpointOptions =>
                     {
                         endpointOptions.AdvertisedIPAddress = siloEndpointConfiguration.Ip;
                         endpointOptions.SiloPort = siloEndpointConfiguration.SiloPort;
                         endpointOptions.GatewayPort = siloEndpointConfiguration.GatewayPort;
                         endpointOptions.SiloListeningEndpoint = new IPEndPoint(IPAddress.Any, 2000);
-                        endpointOptions.GatewayListeningEndpoint = new IPEndPoint(IPAddress.Any, siloEndpointConfiguration.GatewayPort);
+                        endpointOptions.GatewayListeningEndpoint = new IPEndPoint(IPAddress.Any, 3000);
                     });
                     siloBuilder.ConfigureApplicationParts(applicationPartManager =>
                         applicationPartManager.AddApplicationPart(typeof(HelloWorld).Assembly).WithReferences());
@@ -50,12 +57,13 @@ namespace SiloHost
 
         private static SiloEndpointConfiguration GetSiloEndpointConfiguration(
             IPAddress advertisedAddress,
+            int siloPort,
             int gatewayPort)
         {
 
             return new SiloEndpointConfiguration(
                 advertisedAddress,
-                2000,
+                siloPort,
                 gatewayPort);
         }
 
